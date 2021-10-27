@@ -60,6 +60,97 @@ function getInfoType(type: number): { type: string; colorId: number } {
   }
 }
 
+async function syncTimeTable(google: Google, magister: Magister) {
+  logger.log('syncing calendar...');
+
+  const calendars = await google.calendars();
+  const exists = calendars.find((calendar) => calendar.summary === config.calendarName);
+  let calendarId: string;
+
+  if (!exists) {
+    logger.log("calendar doesn't exists, creating a new one");
+
+    const calendar = await google.createCalendar(
+      config.calendarName,
+      'See all your Magister appointments in Google calendar',
+      'Europe/Amsterdam'
+    );
+    calendarId = calendar.id;
+  } else {
+    calendarId = exists.id;
+  }
+
+  const magisterDateFormat = 'YYYY-MM-D';
+  const from = dayjs(); // today
+  const to = dayjs().add(parseInt(config.weeksAhead), 'week'); // x weeks ahead
+
+  const appointments = await magister.appointments(
+    from.format(magisterDateFormat),
+    to.format(magisterDateFormat)
+  );
+
+  const events = await google.events(calendarId, from.format(), to.format()); // only get events in timeframe
+
+  // clear the old hashes
+  hashes.clear();
+
+  for (const event of events) {
+    const eventHash = hash(
+      event.summary,
+      event.start.dateTime,
+      event.end.dateTime,
+      event.location,
+      event.description
+    );
+
+    hashes.set(eventHash, event);
+  }
+
+  for (const appointment of appointments) {
+    const summary =
+      appointment.Vakken.length > 0
+        ? `${getInfoType(appointment.InfoType).type ?? ''} ${appointment.Vakken.map(
+            (appointment) => appointment.Naam
+          ).join(', ')} - ${appointment.Docenten.map((docent) => docent.Docentcode).join(', ')}`
+        : appointment.Omschrijving;
+
+    const appointmentHash = hash(
+      summary,
+      appointment.Start,
+      appointment.Einde,
+      appointment.Lokatie,
+      appointment.Inhoud
+    );
+
+    if (!hashes.has(appointmentHash)) {
+      logger.log("appointment doesn't exists in your calendar, creating the event");
+
+      await google.insertEvent(
+        calendarId,
+        summary,
+        appointment.Start,
+        appointment.Einde,
+        appointment.Lokatie,
+        appointment.Inhoud,
+        getInfoType(appointment.InfoType).colorId
+      );
+    } else {
+      logger.log('appointment already exists in calendar, deleting the hash');
+      hashes.delete(appointmentHash);
+    }
+
+    await sleep(500); // rate limit
+  }
+
+  hashes.forEach(async (event) => {
+    await google.deleteEvent(event.id);
+  });
+
+  logger.log(
+    `synced from ${from.format()} to ${to.format()}, syncing again in ${config.interval} minutes`
+  );
+}
+
 async function sync() {
   logger.log('starting...');
 
@@ -69,96 +160,12 @@ async function sync() {
   const magister = new Magister();
   await magister.login(config.tenant, config.username, config.password);
 
-  setInterval(async () => {
-    logger.log('syncing calendar...');
-
-    const calendars = await google.calendars();
-    const exists = calendars.find((calendar) => calendar.summary === config.calendarName);
-    let calendarId: string;
-
-    if (!exists) {
-      logger.log("calendar doesn't exists, creating a new one");
-
-      const calendar = await google.createCalendar(
-        config.calendarName,
-        'See all your Magister appointments in Google calendar',
-        'Europe/Amsterdam'
-      );
-      calendarId = calendar.id;
-    } else {
-      calendarId = exists.id;
-    }
-
-    const magisterDateFormat = 'YYYY-MM-D';
-    const from = dayjs(); // today
-    const to = dayjs().add(parseInt(config.weeksAhead), 'week'); // x weeks ahead
-
-    const appointments = await magister.appointments(
-      from.format(magisterDateFormat),
-      to.format(magisterDateFormat)
-    );
-
-    const events = await google.events(calendarId, from.format(), to.format()); // only get events in timeframe
-
-    // clear the old hashes
-    hashes.clear();
-
-    for (const event of events) {
-      const eventHash = hash(
-        event.summary,
-        event.start.dateTime,
-        event.end.dateTime,
-        event.location,
-        event.description
-      );
-
-      hashes.set(eventHash, event);
-    }
-
-    for (const appointment of appointments) {
-      const summary =
-        appointment.Vakken.length > 0
-          ? `${getInfoType(appointment.InfoType).type ?? ''} ${appointment.Vakken.map(
-              (appointment) => appointment.Naam
-            ).join(', ')} - ${appointment.Docenten.map((docent) => docent.Docentcode).join(', ')}`
-          : appointment.Omschrijving;
-
-      const appointmentHash = hash(
-        summary,
-        appointment.Start,
-        appointment.Einde,
-        appointment.Lokatie,
-        appointment.Inhoud
-      );
-
-      if (!hashes.has(appointmentHash)) {
-        logger.log("appointment doesn't exists in your calendar, creating the event");
-
-        await google.insertEvent(
-          calendarId,
-          summary,
-          appointment.Start,
-          appointment.Einde,
-          appointment.Lokatie,
-          appointment.Inhoud,
-          getInfoType(appointment.InfoType).colorId
-        );
-      } else {
-        logger.log('appointment already exists in calendar, deleting the hash');
-        hashes.delete(appointmentHash);
-      }
-
-      await sleep(500); // rate limit
-    }
-
-    hashes.forEach(async (event) => {
-      await google.deleteEvent(event.id);
-    });
-
-    logger.log(
-      `synced from ${from.format()} to ${to.format()}, syncing again in ${config.interval} minutes`
-    );
-  }, minutesToMilliSeconds(parseInt(config.interval)));
+  // TODO: improve this bad code
+  await syncTimeTable(google, magister);
+  setInterval(
+    async () => await syncTimeTable(google, magister),
+    minutesToMilliSeconds(parseInt(config.interval))
+  );
 }
 
 sync();
