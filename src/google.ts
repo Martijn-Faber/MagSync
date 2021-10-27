@@ -30,7 +30,7 @@ export class Google {
 
     try {
       credentials = readFileSync(tokenPath);
-      client.setCredentials(JSON.parse(credentials.toString()));
+      client.setCredentials(JSON.parse(credentials));
     } catch (err) {
       this.getOAuthCredentials();
     }
@@ -120,7 +120,7 @@ export class Google {
       const token = await this.client.getToken(code);
       this.client.setCredentials(token.tokens);
 
-      writeFile(tokenPath, JSON.stringify(token), (err) => {
+      writeFile(tokenPath, JSON.stringify(token.tokens), (err) => {
         if (err) return logger.error(err.message);
       });
     });
