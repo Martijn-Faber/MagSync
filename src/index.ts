@@ -123,7 +123,7 @@ async function syncTimeTable(google: Google, magister: Magister) {
     );
 
     if (!hashes.has(appointmentHash)) {
-      logger.log("appointment doesn't exists in your calendar, creating the event");
+      logger.log(`adding appointment ${appointment.Id}`);
 
       await google.insertEvent(
         calendarId,
@@ -135,19 +135,22 @@ async function syncTimeTable(google: Google, magister: Magister) {
         getInfoType(appointment.InfoType).colorId
       );
     } else {
-      logger.log('appointment already exists in calendar, deleting the hash');
+      logger.log(`appointment ${appointment.Id} already exists, removing hash ${appointmentHash}`);
       hashes.delete(appointmentHash);
     }
 
     await sleep(500); // rate limit
   }
 
+  // remove canceled appointments from google
   hashes.forEach(async (event) => {
     await google.deleteEvent(event.id);
   });
 
   logger.log(
-    `synced from ${from.format()} to ${to.format()}, syncing again in ${config.interval} minutes`
+    `successfully synced from ${from.format()} to ${to.format()}, syncing again in ${
+      config.interval
+    } minutes`
   );
 }
 
