@@ -6,6 +6,7 @@ import { minutesToMilliSeconds } from './util/transform';
 import { config } from './util/config';
 import { Magister } from './magister';
 import { hash } from './util/hash';
+import { parseBoolean } from './util/parser';
 
 let hashes = new Map();
 const logger = new Logger('index');
@@ -108,7 +109,9 @@ async function syncTimeTable(google: Google, magister: Magister) {
 
   for (const appointment of appointments) {
     // hour? - subject(s) - teacher(s)
-    const summary = `${config.showHourInSummary ? appointment.LesuurVan ?? '' : ''} - ${
+    const summary = `${
+      parseBoolean(config.showHourInSummary) ? appointment.LesuurVan ?? '' : ''
+    } - ${
       appointment.Vakken.length > 0
         ? `${getInfoType(appointment.InfoType).type ?? ''} ${appointment.Vakken.map(
             (appointment) => appointment.Naam
@@ -127,7 +130,6 @@ async function syncTimeTable(google: Google, magister: Magister) {
     if (!hashes.has(appointmentHash)) {
       logger.log(`adding appointment ${appointment.Id}`);
 
-      console.log(`calendar id = ${calendarId}`);
       await google.insertEvent(
         calendarId,
         summary,
