@@ -107,12 +107,14 @@ async function syncTimeTable(google: Google, magister: Magister) {
   }
 
   for (const appointment of appointments) {
-    const summary =
+    // hour? - subject(s) - teacher(s)
+    const summary = `${config.showHourInSummary ? appointment.LesuurVan ?? '' : ''} - ${
       appointment.Vakken.length > 0
         ? `${getInfoType(appointment.InfoType).type ?? ''} ${appointment.Vakken.map(
             (appointment) => appointment.Naam
           ).join(', ')} - ${appointment.Docenten.map((docent) => docent.Docentcode).join(', ')}`
-        : appointment.Omschrijving;
+        : appointment.Omschrijving
+    }`;
 
     const appointmentHash = hash(
       summary,
@@ -125,6 +127,7 @@ async function syncTimeTable(google: Google, magister: Magister) {
     if (!hashes.has(appointmentHash)) {
       logger.log(`adding appointment ${appointment.Id}`);
 
+      console.log(`calendar id = ${calendarId}`);
       await google.insertEvent(
         calendarId,
         summary,

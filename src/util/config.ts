@@ -27,5 +27,6 @@ export const config = {
   clientSecret: validate('GOOGLE_CLIENT_SECRET'),
 
   interval: validate('SYNC_INTERVAL', 60),
-  weeksAhead: validate('WEEKS_AHEAD', 2)
+  weeksAhead: validate('WEEKS_AHEAD', 2),
+  showHourInSummary: validate('SHOW_HOUR_IN_SUMMARY', true)
 };
