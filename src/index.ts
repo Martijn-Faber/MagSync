@@ -144,7 +144,7 @@ async function syncTimeTable(google: Google, magister: Magister) {
 
   // remove canceled appointments from google
   hashes.forEach(async (event) => {
-    await google.deleteEvent(event.id);
+    await google.deleteEvent(event.id, calendarId);
   });
 
   logger.log(

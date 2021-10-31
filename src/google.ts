@@ -75,9 +75,10 @@ export class Google {
     });
   }
 
-  async deleteEvent(id: string) {
+  async deleteEvent(id: string, calendarId: string) {
     await this.calendar.events.delete({
-      eventId: id
+      eventId: id,
+      calendarId
     });
   }
 
