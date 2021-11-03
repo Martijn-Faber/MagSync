@@ -148,10 +148,11 @@ async function syncTimeTable(google: Google, magister: Magister) {
   }
 
   // remove canceled appointments from google
-  hashes.forEach(async (event) => {
-    await google.deleteEvent(event.id, calendarId);
+  for (const [key, value] of hashes) {
+    logger.log(`remove canceled appointment ${key}`);
+    await google.deleteEvent(value.id, calendarId);
     await sleep(500); // rate limit
-  });
+  }
 
   logger.log(
     `successfully synced from ${from.format()} to ${to.format()}, syncing again in ${
