@@ -14,7 +14,7 @@ export interface Appointment {
   Omschrijving: string;
   Lokatie: string;
   Status: number;
-  Type: string;
+  Type: number;
   IsOnlineDeelname: boolean;
   WeergaveType: string;
   Inhoud: string;
