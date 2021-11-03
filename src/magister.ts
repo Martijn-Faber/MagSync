@@ -3,7 +3,7 @@ import { AuthManager } from 'magister-openid';
 import Logger from './util/logger';
 import Account from './interfaces/account';
 import fetch, { RequestInfo, RequestInit } from 'node-fetch';
-import { Appointment } from './interfaces';
+import { Appointment, Kwt } from './interfaces';
 import { URLSearchParams } from 'url';
 import dayjs from 'dayjs';
 
@@ -112,5 +112,20 @@ export class Magister {
 
     this.logger.log('successfully fetched appointments');
     return appointments.Items;
+  }
+
+  async kwt(from: string, to: string): Promise<Kwt> {
+    this.logger.log('fetching kwt hour');
+
+    const kwt = await this.fetch(
+      `https://${this.tenant}/api/leerlingen/${
+        (
+          await this.account()
+        ).Persoon.Id
+      }/keuzewerktijd/keuzes?tot=${to}&van=${from}`
+    );
+
+    this.logger.log('successfully fetched kwt hour');
+    return kwt.Items[0];
   }
 }

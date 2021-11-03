@@ -118,15 +118,46 @@ async function syncTimeTable(google: Google, magister: Magister) {
     }${
       appointment.Vakken.length > 0
         ? `${getInfoType(appointment.InfoType).type ?? ''} ${appointment.Vakken.map(
-            (appointment) => appointment.Naam
-          ).join(', ')} - ${appointment.Docenten.map((docent) => docent.Docentcode).join(', ')}`
+            (subject) => subject.Naam
+          ).join(', ')} - ${appointment.Docenten.map((teacher) => teacher.Docentcode).join(', ')}`
         : appointment.Omschrijving
     }`;
 
-    const homework =
-      appointment.Type == 7
-        ? `Inschrijven kan op <a href="https://${config.tenant}/magister/#/agenda/huiswerk/${appointment.Id}">magister</a>`
-        : appointment.Inhoud;
+    let homework = appointment.Inhoud;
+
+    // kwt hours
+    if (appointment.Type == 7) {
+      const kwt = await magister.kwt(appointment.Start, appointment.Einde);
+
+      const html = `
+      ${kwt.Keuzes.map((choise) => {
+        return `<h2><a href="https://${config.tenant}/magister/#/agenda/huiswerk/${
+          appointment.Id
+        }">${choise.Omschrijving}</a></h2>
+      ${
+        choise.Lokalen
+          ? `<span>lokalen: ${choise.Lokalen.map((classroom) => classroom.Naam).join(', ')}</span>`
+          : ''
+      }
+      ${
+        choise.Docenten
+          ? `<span>docenten: ${choise.Docenten.map((teacher) => teacher.Docentcode).join(
+              ', '
+            )}</span>`
+          : ''
+      }
+      ${
+        choise.MaxDeelnemers
+          ? `<span>deelnemers: ${`${choise.AantalDeelnemers} / ${choise.MaxDeelnemers}`}</span>`
+          : '<span>deelnemers: geen limit</span>'
+      }
+      ${choise.Inhoud ? `<span>inhoud: ${choise.Inhoud}</span>` : ''}`;
+      })}`;
+
+      homework = kwt.MagInschrijven
+        ? html
+        : 'Helaas kun je niet meer inschrijven voor dit keuzewerktijd uur';
+    }
 
     const appointmentHash = hash(
       summary,
