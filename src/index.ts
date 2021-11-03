@@ -110,8 +110,12 @@ async function syncTimeTable(google: Google, magister: Magister) {
   for (const appointment of appointments) {
     // hour? - subject(s) - teacher(s)
     const summary = `${
-      parseBoolean(config.showHourInSummary) ? appointment.LesuurVan ?? '' : ''
-    } - ${
+      parseBoolean(config.showHourInSummary)
+        ? appointment.LesuurVan
+          ? appointment.LesuurVan + ' - '
+          : '' ?? ''
+        : ''
+    }${
       appointment.Vakken.length > 0
         ? `${getInfoType(appointment.InfoType).type ?? ''} ${appointment.Vakken.map(
             (appointment) => appointment.Naam
