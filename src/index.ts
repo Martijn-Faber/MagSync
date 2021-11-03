@@ -123,12 +123,17 @@ async function syncTimeTable(google: Google, magister: Magister) {
         : appointment.Omschrijving
     }`;
 
+    const homework =
+      appointment.Type == 7
+        ? `Inschrijven kan op <a href="https://${config.tenant}/magister/#/agenda/huiswerk/${appointment.Id}">magister</a>`
+        : appointment.Inhoud;
+
     const appointmentHash = hash(
       summary,
       appointment.Start,
       appointment.Einde,
       appointment.Lokatie,
-      appointment.Inhoud
+      homework
     );
 
     if (!hashes.has(appointmentHash)) {
@@ -140,7 +145,7 @@ async function syncTimeTable(google: Google, magister: Magister) {
         appointment.Start,
         appointment.Einde,
         appointment.Lokatie,
-        appointment.Inhoud,
+        homework,
         getInfoType(appointment.InfoType).colorId
       );
     } else {
